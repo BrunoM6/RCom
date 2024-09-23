@@ -19,7 +19,7 @@
 #define FALSE 0
 #define TRUE 1
 
-#define flag 0x7E
+#define FLAG 0x7E
 #define A_SENDER 0x03
 #define A_RECEIVER 0x07
 #define SET 0x03
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
         int bytes = read(fd, buf_r, BUF_SIZE);
         buf[bytes] = '\0';
         printf(":%s:%d\n", buf, bytes);
-        if (buf[0] == FLAG)
+        if (buf[4] == FLAG)
             STOP = TRUE;
     }
     
