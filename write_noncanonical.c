@@ -19,7 +19,13 @@
 #define FALSE 0
 #define TRUE 1
 
-#define BUF_SIZE 256
+#define flag 0x7E
+#define A_SENDER 0x03
+#define A_RECEIVER 0x07
+#define SET 0x03
+#define UA 0x07
+
+#define BUF_SIZE 5
 
 volatile int STOP = FALSE;
 
@@ -91,16 +97,12 @@ int main(int argc, char *argv[])
 
     // Create string to send
     unsigned char buf[BUF_SIZE] = {0};
-
-    for (int i = 0; i < BUF_SIZE; i++)
-    {
-        buf[i] = 'a' + i % 26;
-    }
-
-    // In non-canonical mode, '\n' does not end the writing.
-    // Test this condition by placing a '\n' in the middle of the buffer.
-    // The whole buffer must be sent even with the '\n'.
-    buf[5] = '\n';
+    
+    buf[0] = FLAG;
+    buf[1] = A_SENDER;
+    buf[2] = SET;
+    buf[3] = A_SENDER ^ SET;
+    buf[4] = FLAG;
 
     int bytes = write(fd, buf, BUF_SIZE);
     printf("%d bytes written\n", bytes);
@@ -108,6 +110,17 @@ int main(int argc, char *argv[])
     // Wait until all bytes have been written to the serial port
     sleep(1);
 
+    unsigned char buf_r[BUF_SIZE + 1] = {0};
+
+    while (STOP == FALSE)
+    {   
+        int bytes = read(fd, buf_r, BUF_SIZE);
+        buf[bytes] = '\0';
+        printf(":%s:%d\n", buf, bytes);
+        if (buf[0] == FLAG)
+            STOP = TRUE;
+    }
+    
     // Restore the old port settings
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
     {
