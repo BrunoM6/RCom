@@ -115,10 +115,17 @@ int main(int argc, char *argv[])
     while (STOP == FALSE)
     {   
         int bytes = read(fd, buf_r, BUF_SIZE);
-        buf[bytes] = '\0';
-        printf(":%s:%d\n", buf, bytes);
-        if (buf[4] == FLAG)
+        if(bytes < 0 || bytes > BUF_SIZE)
+        {
+            perror("read error")
+            break;
+        }
+        buf_r[bytes] = '\0';
+        printf(":%s:%d\n", buf_r, bytes);
+        if (buf[4] == FLAG && bytes == BUF_SIZE)
+        {
             STOP = TRUE;
+        }
     }
     
     // Restore the old port settings
