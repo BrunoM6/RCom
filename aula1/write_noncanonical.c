@@ -124,9 +124,9 @@ int main(int argc, char *argv[])
         printf(":%s:%d\n", buf_r, bytes);
         for(int i = 0; i < bytes; i++)
         {
-            printf("byte nº %d: char %u\n", i, buf_r[i]);
+            printf("byte nº %d: char 0x%02X\n", i, buf_r[i]);
         }
-        if (buf_r[4] == FLAG && bytes == BUF_SIZE)
+        if (buf_r[0] == FLAG && buf_r[1] == A_RECEIVER && buf_r[2] == UA && buf_r[3] == (A_RECEIVER ^ UA) && [4] == FLAG)
         {
             STOP = TRUE;
         }
