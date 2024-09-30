@@ -122,7 +122,11 @@ int main(int argc, char *argv[])
         }
         buf_r[bytes] = '\0';
         printf(":%s:%d\n", buf_r, bytes);
-        if (buf[4] == FLAG && bytes == BUF_SIZE)
+        for(int i = 0; i < bytes; i++)
+        {
+            printf("byte nº %d: char %u\n", i, buf_r[i]);
+        }
+        if (buf_r[4] == FLAG && bytes == BUF_SIZE)
         {
             STOP = TRUE;
         }
