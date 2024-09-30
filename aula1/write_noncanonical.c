@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
+#include <signal.h>
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
@@ -28,6 +29,17 @@
 #define BUF_SIZE 5
 
 volatile int STOP = FALSE;
+
+int alarmEnabled = FALSE;
+int alarmCount = 0;
+
+void alarmHandler()
+{
+    alarmEnabled = FALSE;
+    alarmCount++;
+
+    printf("Alarm #%d\n", alarmCount);
+}
 
 int main(int argc, char *argv[])
 {
@@ -74,7 +86,7 @@ int main(int argc, char *argv[])
     // Set input mode (non-canonical, no echo,...)
     newtio.c_lflag = 0;
     newtio.c_cc[VTIME] = 0; // Inter-character timer unused
-    newtio.c_cc[VMIN] = 5;  // Blocking read until 5 chars received
+    newtio.c_cc[VMIN] = 0;  // Blocking read until 5 chars received
 
     // VTIME e VMIN should be changed in order to protect with a
     // timeout the reception of the following character(s)
@@ -95,6 +107,9 @@ int main(int argc, char *argv[])
 
     printf("New termios structure set\n");
 
+    // Set alarm function handler
+    (void)signal(SIGALRM, alarmHandler);
+
     // Create string to send
     unsigned char buf[BUF_SIZE] = {0};
     
@@ -103,35 +118,62 @@ int main(int argc, char *argv[])
     buf[2] = SET;
     buf[3] = A_SENDER ^ SET;
     buf[4] = FLAG;
-
-    int bytes = write(fd, buf, BUF_SIZE);
-    printf("Bytes written:\n");
-    for(int i = 0; i < bytes; i++)
+    
+    while (alarmCount < 4 && STOP == FALSE)
     {
-        printf("byte nº %d: char 0x%02X\n", i, buf[i]);
-    }
-    // Wait until all bytes have been written to the serial port
-    sleep(1);
-
-    unsigned char buf_r[BUF_SIZE + 1] = {0};
-
-    while (STOP == FALSE)
-    {   
-        int bytes = read(fd, buf_r, BUF_SIZE);
-        if(bytes < 0 || bytes > BUF_SIZE)
+        if (alarmEnabled == TRUE)
         {
-            perror("read error");
-            break;
+            continue;
         }
-        buf_r[bytes] = '\0';
-        printf("Bytes received:\n");
+        int bytes = write(fd, buf, BUF_SIZE);
+        
+        printf("Bytes written:\n");
         for(int i = 0; i < bytes; i++)
         {
-            printf("byte nº %d: char 0x%02X\n", i, buf_r[i]);
+            printf("byte nº %d: char 0x%02X\n", i, buf[i]);
         }
-        if (buf_r[0] == FLAG && buf_r[1] == A_SENDER && buf_r[2] == UA && buf_r[3] == (A_SENDER ^ UA) && buf_r[4] == FLAG)
+
+        // Wait until all bytes have been written to the serial port
+        sleep(1);
+
+        if (bytes < 0 || bytes > BUF_SIZE)
         {
-            STOP = TRUE;
+            perror("write error");
+            exit(-1);
+        }
+        else
+        {
+            while (STOP == FALSE)
+            {
+                unsigned char buf_r[BUF_SIZE + 1] = {0};
+
+                int bytes = read(fd, buf_r, BUF_SIZE);
+                if (bytes == 0)
+                {
+                    if (alarmEnabled == FALSE)
+                    {
+                        alarm(3); // Set alarm to be triggered in 3s
+                        alarmEnabled = TRUE;
+                        printf("I tried\n");
+                    }
+                    break;
+                }
+                if(bytes < 0 || bytes > BUF_SIZE)
+                {
+                    perror("read error");
+                    break;
+                }
+                buf_r[bytes] = '\0';
+                printf("Bytes received:\n");
+                for(int i = 0; i < bytes; i++)
+                {
+                    printf("byte nº %d: char 0x%02X\n", i, buf_r[i]);
+                }
+                if (buf_r[0] == FLAG && buf_r[1] == A_SENDER && buf_r[2] == UA && buf_r[3] == (A_SENDER ^ UA) && buf_r[4] == FLAG)
+                {
+                    STOP = TRUE;
+                }
+            }
         }
     }
     
