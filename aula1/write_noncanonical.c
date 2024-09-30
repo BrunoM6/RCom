@@ -105,8 +105,11 @@ int main(int argc, char *argv[])
     buf[4] = FLAG;
 
     int bytes = write(fd, buf, BUF_SIZE);
-    printf("%d bytes written\n", bytes);
-
+    printf("Bytes written:\n");
+    for(int i = 0; i < bytes; i++)
+    {
+        printf("byte nº %d: char 0x%02X\n", i, buf[i]);
+    }
     // Wait until all bytes have been written to the serial port
     sleep(1);
 
@@ -117,16 +120,16 @@ int main(int argc, char *argv[])
         int bytes = read(fd, buf_r, BUF_SIZE);
         if(bytes < 0 || bytes > BUF_SIZE)
         {
-            perror("read error")
+            perror("read error");
             break;
         }
         buf_r[bytes] = '\0';
-        printf(":%s:%d\n", buf_r, bytes);
+        printf("Bytes received:\n");
         for(int i = 0; i < bytes; i++)
         {
             printf("byte nº %d: char 0x%02X\n", i, buf_r[i]);
         }
-        if (buf_r[0] == FLAG && buf_r[1] == A_RECEIVER && buf_r[2] == UA && buf_r[3] == (A_RECEIVER ^ UA) && [4] == FLAG)
+        if (buf_r[0] == FLAG && buf_r[1] == A_SENDER && buf_r[2] == UA && buf_r[3] == (A_SENDER ^ UA) && buf_r[4] == FLAG)
         {
             STOP = TRUE;
         }
